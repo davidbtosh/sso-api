@@ -1,8 +1,11 @@
 ﻿using System.Text;
 using System.Threading.Tasks;
+using B2CWebApi.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,6 +17,7 @@ namespace B2CWebApi
         public static string ScopeRead;
         public static string ScopeWrite;
 
+       
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -36,7 +40,9 @@ namespace B2CWebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-              services.AddAuthentication(options =>
+            services.AddCors();
+
+            services.AddAuthentication(options =>
               {
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
               })
@@ -50,26 +56,38 @@ namespace B2CWebApi
                   };
                 });
 
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ReadPolicy", policy => policy.Requirements.Add(new ScopeRequirement()));
+            });
+
+            services.AddSingleton<IAuthorizationHandler, ScopeReadHandler>();
+
             // Add framework services.
-            services.AddMvc();
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
+            //loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+            //loggerFactory.AddDebug();
+
+            app.UseCors(x => x
+              .AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials());
 
             ScopeRead = Configuration["AzureAdB2C:ScopeRead"];
             ScopeWrite = Configuration["AzureAdB2C:ScopeWrite"];
 
-            app.UseAuthentication();
+            app.UseAuthentication();            
 
             app.UseMvc(routes =>
             {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                routes.MapRoute(name: "default", template: "{controller=Home}/{action=Index}/{id?}");
             });
         }
 
