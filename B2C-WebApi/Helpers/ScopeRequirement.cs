@@ -9,5 +9,10 @@ namespace B2CWebApi.Helpers
 
     public class ScopeRequirement : IAuthorizationRequirement
     {
+        public ScopeRequirement(string scopeType)
+        {
+            ScopeType = scopeType;
+        }
+        public string ScopeType { get; set; }
     }
 }

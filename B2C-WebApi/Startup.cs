@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace B2CWebApi
 {
@@ -59,13 +60,25 @@ namespace B2CWebApi
 
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("ReadPolicy", policy => policy.Requirements.Add(new ScopeRequirement()));
+                options.AddPolicy("ReadPolicy", policy => policy.Requirements.Add(new ScopeRequirement(ScopeRead)));
+                options.AddPolicy("WritePolicy", policy => policy.Requirements.Add(new ScopeRequirement(ScopeWrite)));
             });
 
-            services.AddSingleton<IAuthorizationHandler, ScopeReadHandler>();
+            services.AddSingleton<IAuthorizationHandler, ScopeAuthHandler>();
 
             // Add framework services.
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Info
+                {
+                    Title = "mtosh-sso API",
+                    Version = "v1"
+                });              
+               
+            });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -83,12 +96,15 @@ namespace B2CWebApi
             ScopeRead = Configuration["AzureAdB2C:ScopeRead"];
             ScopeWrite = Configuration["AzureAdB2C:ScopeWrite"];
 
-            app.UseAuthentication();            
+            app.UseAuthentication();
 
-            app.UseMvc(routes =>
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                routes.MapRoute(name: "default", template: "{controller=Home}/{action=Index}/{id?}");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "mtosh-sso API V1");
             });
+
+            app.UseMvc();
         }
 
         private Task AuthenticationFailed(AuthenticationFailedContext arg)

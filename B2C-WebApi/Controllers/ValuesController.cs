@@ -14,7 +14,7 @@ namespace B2CWebApi.Controllers
     {
         // GET: api/values
         [HttpGet]
-        [Authorize(Policy = "ReadPolicy")]
+        [Authorize(Policy = "WritePolicy")]
         public IActionResult Get()
         {
             //if(1 == 1)
